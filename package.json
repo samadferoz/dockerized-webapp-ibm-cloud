@@ -1,0 +1,13 @@
+{
+  "name": "dockerized-webapp-ibm-cloud",
+  "version": "1.0.0",
+  "description": "A simple Node.js Express web app, containerized with Docker, ready for deployment on IBM Cloud (Code Engine / Kubernetes Service).",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "license": "MIT"
+}

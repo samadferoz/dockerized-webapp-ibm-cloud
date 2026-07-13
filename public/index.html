@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Dockerized Web App on IBM Cloud</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6fa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+    max-width: 500px;
+  }
+  h1 { color: #0f62fe; }
+  button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: #0f62fe;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  pre {
+    text-align: left;
+    background: #f4f6fa;
+    padding: 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 Dockerized Web App</h1>
+    <p>This Node.js app is running inside a Docker container, ready to deploy on IBM Cloud.</p>
+    <button onclick="fetchInfo()">Get App Info</button>
+    <pre id="output">Click the button above...</pre>
+  </div>
+
+  <script>
+    async function fetchInfo() {
+      const res = await fetch('/api/info');
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
