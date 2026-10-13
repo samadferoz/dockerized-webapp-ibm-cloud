@@ -1,61 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dockerized Web App on IBM Cloud</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f4f6fa;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-  }
-  .card {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    text-align: center;
-    max-width: 500px;
-  }
-  h1 { color: #0f62fe; }
-  button {
-    margin-top: 15px;
-    padding: 10px 20px;
-    background: #0f62fe;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  pre {
-    text-align: left;
-    background: #f4f6fa;
-    padding: 10px;
-    border-radius: 6px;
-    overflow-x: auto;
-  }
+  :root { --bg:#f4f6fb; --card:#fff; --text:#1b2433; --muted:#6b7587; --accent:#0f62fe; --border:#e3e8f1; }
+  :root[data-theme="dark"] { --bg:#0f1420; --card:#171e2e; --text:#e8ecf4; --muted:#93a0b8; --accent:#78a9ff; --border:#262f45; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:28px 20px 8px; max-width:1000px; margin:auto; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  h1 { margin:0 0 4px; font-size:1.6rem; }
+  .sub { color:var(--muted); margin:0; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:.8rem; font-weight:600; background:#d1fadf; color:#0a6b2d; }
+  .badge.down { background:#fddcdc; color:#a11; }
+  main { max-width:1000px; margin:auto; padding:12px 20px 40px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .card .label { color:var(--muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+  .card .value { font-size:1.25rem; font-weight:600; margin-top:6px; word-break:break-all; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:18px 0; }
+  button { background:var(--accent); color:#fff; border:0; padding:9px 16px; border-radius:8px; font-size:.95rem; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
+  h2 { font-size:1.1rem; margin:28px 0 10px; }
+  .stack { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:.9rem; }
+  footer { text-align:center; color:var(--muted); font-size:.85rem; padding:20px; }
 </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🚀 Dockerized Web App</h1>
-    <p>This Node.js app is running inside a Docker container, ready to deploy on IBM Cloud.</p>
-    <button onclick="fetchInfo()">Get App Info</button>
-    <pre id="output">Click the button above...</pre>
+<header>
+  <div>
+    <h1>🐳 Dockerized Web App on IBM Cloud</h1>
+    <p class="sub">Node.js + Express container running on IBM Cloud Code Engine</p>
+  </div>
+  <div class="row" style="margin:0">
+    <span id="status" class="badge">checking…</span>
+    <button class="ghost" id="themeBtn">Toggle theme</button>
+  </div>
+</header>
+
+<main>
+  <div class="row">
+    <button id="refreshBtn">Refresh now</button>
+    <button class="ghost" id="visitBtn">I'm a visitor 👋</button>
+    <span class="sub">Live time: <strong id="clock">--</strong></span>
+    <span class="sub">Auto-refresh every 5s</span>
   </div>
 
-  <script>
-    async function fetchInfo() {
-      const res = await fetch('/api/info');
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-    }
-  </script>
+  <div class="grid" id="grid"></div>
+
+  <h2>Tech stack</h2>
+  <div class="stack">
+    <span class="chip">Node.js 20</span><span class="chip">Express</span>
+    <span class="chip">Docker (multi-stage)</span><span class="chip">GitHub Actions</span>
+    <span class="chip">IBM Container Registry</span><span class="chip">IBM Code Engine</span>
+  </div>
+
+  <h2>Tip for demo</h2>
+  <p class="sub">Hostname = container ID. Agar Code Engine mein multiple instances chal rahe hain, refresh karne par hostname badal sakta hai. Yahi load balancing / scaling ka proof hai.</p>
+</main>
+<footer>Mini Project &middot; Containerization &amp; Cloud Deployment</footer>
+
+<script>
+const fmt = s => { const h=Math.floor(s/3600), m=Math.floor(s%3600/60); return `${h}h ${m}m ${s%60}s`; };
+const cards = [
+  ['Container hostname','hostname'], ['Visitors','_visitors'], ['Uptime','_uptime'],
+  ['Memory (RSS)','_mem'], ['Node version','nodeVersion'], ['Platform','platform'],
+  ['CPU cores','cpuCores'], ['Environment','environment'], ['Total requests','totalRequests'], ['App version','version']
+];
+let visitors = 0;
+
+function render(d) {
+  d._visitors = visitors; d._uptime = fmt(d.uptimeSeconds); d._mem = d.memoryMB + ' MB';
+  const grid = document.getElementById('grid'); grid.innerHTML = '';
+  cards.forEach(([label,key]) => {
+    const el = document.createElement('div'); el.className = 'card';
+    const l = document.createElement('div'); l.className = 'label'; l.textContent = label;
+    const v = document.createElement('div'); v.className = 'value'; v.textContent = d[key];
+    el.append(l, v); grid.append(el);
+  });
+}
+
+async function load() {
+  const badge = document.getElementById('status');
+  try {
+    const [info, vis, health] = await Promise.all([
+      fetch('/api/info').then(r => r.json()),
+      fetch('/api/visit').then(r => r.json()),
+      fetch('/health').then(r => r.json())
+    ]);
+    visitors = vis.visitors;
+    render(info);
+    badge.textContent = 'Healthy'; badge.className = 'badge';
+  } catch (e) {
+    badge.textContent = 'Down'; badge.className = 'badge down';
+  }
+}
+
+document.getElementById('refreshBtn').onclick = load;
+document.getElementById('visitBtn').onclick = async () => {
+  await fetch('/api/visit', { method: 'POST' }); load();
+};
+document.getElementById('themeBtn').onclick = () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+};
+setInterval(() => document.getElementById('clock').textContent = new Date().toLocaleTimeString(), 1000);
+setInterval(load, 5000);
+load();
+</script>
 </body>
 </html>

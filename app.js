@@ -1,26 +1,63 @@
 const express = require('express');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const os = require('os');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const startedAt = Date.now();
+let visitorCount = 0;
+let requestCount = 0;
 
-// Serve static frontend
-app.use(express.static(path.join(__dirname, 'public')));
+app.disable('x-powered-by');
+app.use(helmet());
+if (process.env.NODE_ENV !== 'test') app.use(morgan('combined'));
+app.use(express.json());
 
-// Health check route (useful for IBM Cloud Code Engine / Kubernetes probes)
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'App is healthy' });
+app.use((req, res, next) => {
+  requestCount++;
+  next();
 });
 
-// Simple API route to prove the app is dynamic, not just static files
+// Static frontend
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Health check (liveness/readiness probe for Code Engine / Kubernetes)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptimeSeconds: Math.floor(process.uptime()) });
+});
+
+// System / container info
 app.get('/api/info', (req, res) => {
+  const mem = process.memoryUsage();
   res.json({
     project: 'Dockerized Web App Deployment on IBM Cloud',
-    hostname: require('os').hostname(),
+    version: require('./package.json').version,
+    hostname: os.hostname(),
+    platform: `${os.platform()} (${os.arch()})`,
+    nodeVersion: process.version,
+    cpuCores: os.cpus().length,
+    environment: process.env.NODE_ENV || 'development',
+    uptimeSeconds: Math.floor(process.uptime()),
+    memoryMB: Math.round(mem.rss / 1024 / 1024),
+    totalRequests: requestCount,
+    startedAt: new Date(startedAt).toISOString(),
     timestamp: new Date().toISOString()
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Visitor counter (in-memory; resets when container restarts)
+app.post('/api/visit', (req, res) => {
+  visitorCount++;
+  res.json({ visitors: visitorCount, servedBy: os.hostname() });
 });
+app.get('/api/visit', (req, res) => res.json({ visitors: visitorCount }));
+
+// 404 + error handlers
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+module.exports = app;

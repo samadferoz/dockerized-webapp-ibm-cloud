@@ -1,0 +1,54 @@
+name: CI/CD - Build and Deploy to IBM Cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGION: us-south
+  ICR_HOST: us.icr.io
+  IMAGE_NAME: dockerized-webapp
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install IBM Cloud CLI + plugins
+        run: |
+          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+          ibmcloud plugin install container-registry -f
+          ibmcloud plugin install code-engine -f
+
+      - name: Login to IBM Cloud
+        run: |
+          ibmcloud login --apikey "${{ secrets.IBM_CLOUD_API_KEY }}" -r $REGION -g "${{ secrets.IBM_RESOURCE_GROUP }}"
+          ibmcloud cr login
+
+      - name: Build and push image
+        run: |
+          IMAGE=$ICR_HOST/${{ secrets.ICR_NAMESPACE }}/$IMAGE_NAME:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+      - name: Update Code Engine app
+        run: |
+          ibmcloud ce project select --name "${{ secrets.CE_PROJECT }}"
+          ibmcloud ce application update --name $IMAGE_NAME \
+            --image $ICR_HOST/${{ secrets.ICR_NAMESPACE }}/$IMAGE_NAME:${{ github.sha }}

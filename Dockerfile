@@ -1,23 +1,25 @@
-# Use official lightweight Node.js image
-FROM node:20-alpine
-
-# Set working directory inside container
+# ---------- Stage 1: install production dependencies ----------
+FROM node:20-alpine AS deps
 WORKDIR /usr/src/app
-
-# Copy package files first (better layer caching)
 COPY package*.json ./
+RUN npm ci --omit=dev
 
-# Install only production dependencies
-RUN npm install --omit=dev
+# ---------- Stage 2: final small runtime image ----------
+FROM node:20-alpine
+WORKDIR /usr/src/app
+ENV NODE_ENV=production PORT=3000
 
-# Copy rest of the application code
-COPY . .
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY package*.json ./
+COPY app.js server.js ./
+COPY public ./public
 
-# App listens on port 3000
+# Run as non-root user (security best practice)
+USER node
+
 EXPOSE 3000
 
-# Set environment variable
-ENV PORT=3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
 
-# Start the app
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
