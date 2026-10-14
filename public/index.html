@@ -4,64 +4,137 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dockerized Web App on IBM Cloud</title>
-<style>
-  :root { --bg:#f4f6fb; --card:#fff; --text:#1b2433; --muted:#6b7587; --accent:#0f62fe; --border:#e3e8f1; }
-  :root[data-theme="dark"] { --bg:#0f1420; --card:#171e2e; --text:#e8ecf4; --muted:#93a0b8; --accent:#78a9ff; --border:#262f45; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-  header { padding:28px 20px 8px; max-width:1000px; margin:auto; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
-  h1 { margin:0 0 4px; font-size:1.6rem; }
-  .sub { color:var(--muted); margin:0; }
-  .badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:.8rem; font-weight:600; background:#d1fadf; color:#0a6b2d; }
-  .badge.down { background:#fddcdc; color:#a11; }
-  main { max-width:1000px; margin:auto; padding:12px 20px 40px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
-  .card .label { color:var(--muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
-  .card .value { font-size:1.25rem; font-weight:600; margin-top:6px; word-break:break-all; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:18px 0; }
-  button { background:var(--accent); color:#fff; border:0; padding:9px 16px; border-radius:8px; font-size:.95rem; cursor:pointer; }
-  button.ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
-  h2 { font-size:1.1rem; margin:28px 0 10px; }
-  .stack { display:flex; flex-wrap:wrap; gap:8px; }
-  .chip { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:.9rem; }
-  footer { text-align:center; color:var(--muted); font-size:.85rem; padding:20px; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <div>
-    <h1>🐳 Dockerized Web App on IBM Cloud</h1>
-    <p class="sub">Node.js + Express container running on IBM Cloud Code Engine</p>
-  </div>
-  <div class="row" style="margin:0">
-    <span id="status" class="badge">checking…</span>
-    <button class="ghost" id="themeBtn">Toggle theme</button>
+
+<!-- 1. Header -->
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div>
+      <h1>🐳 Dockerized Web App</h1>
+      <p>Node.js + Express app packaged in Docker, tested and deployed with CI/CD</p>
+    </div>
+    <div class="hero-right">
+      <span id="status" class="badge"><span class="dot"></span><span id="statusText">checking…</span></span>
+      <button class="ghost" id="themeBtn">🌓 Theme</button>
+    </div>
   </div>
 </header>
 
-<main>
-  <div class="row">
-    <button id="refreshBtn">Refresh now</button>
-    <button class="ghost" id="visitBtn">I'm a visitor 👋</button>
-    <span class="sub">Live time: <strong id="clock">--</strong></span>
-    <span class="sub">Auto-refresh every 5s</span>
-  </div>
+<main class="wrap">
 
-  <div class="grid" id="grid"></div>
+  <!-- 2. Buttons + clock -->
+  <section class="toolbar">
+    <button id="refreshBtn">🔄 Refresh</button>
+    <button class="ghost" id="visitBtn">👋 I'm a visitor</button>
+    <span class="muted">Time: <strong id="clock">--</strong></span>
+    <span class="muted">Auto-refresh: 5s</span>
+  </section>
 
-  <h2>Tech stack</h2>
-  <div class="stack">
-    <span class="chip">Node.js 20</span><span class="chip">Express</span>
-    <span class="chip">Docker (multi-stage)</span><span class="chip">GitHub Actions</span>
-    <span class="chip">IBM Container Registry</span><span class="chip">IBM Code Engine</span>
-  </div>
+  <!-- 3. Info cards (filled by app.js) -->
+  <section>
+    <h2>Container details</h2>
+    <div class="grid" id="grid"></div>
+  </section>
 
-  <h2>Tip for demo</h2>
-  <p class="sub">Hostname = container ID. Agar Code Engine mein multiple instances chal rahe hain, refresh karne par hostname badal sakta hai. Yahi load balancing / scaling ka proof hai.</p>
+  <!-- 4. Memory chart -->
+  <section>
+    <h2>Live memory usage</h2>
+    <div class="panel">
+      <svg id="chart" viewBox="0 0 600 160" preserveAspectRatio="none" aria-label="Memory usage chart"></svg>
+      <div class="muted small">Last 20 readings (MB). Updates every 5 seconds.</div>
+    </div>
+  </section>
+
+  <!-- 5. Load test -->
+  <section>
+    <h2>Load test</h2>
+    <div class="panel">
+      <p class="muted">Sends 100 requests to <code>/health</code> and shows how fast the container responds. Watch "Total requests" go up.</p>
+      <button id="loadBtn">⚡ Run load test</button>
+      <div class="bar"><div id="barFill"></div></div>
+      <div id="loadResult" class="muted">Not run yet.</div>
+    </div>
+  </section>
+
+  <!-- 6. Pipeline -->
+  <section>
+    <h2>How this app reaches the cloud</h2>
+    <div class="pipeline">
+      <div class="step"><span>💻</span>Code</div><div class="arrow">→</div>
+      <div class="step"><span>🐙</span>GitHub</div><div class="arrow">→</div>
+      <div class="step"><span>🧪</span>Tests</div><div class="arrow">→</div>
+      <div class="step"><span>📦</span>Docker image</div><div class="arrow">→</div>
+      <div class="step"><span>🏢</span>IBM Registry</div><div class="arrow">→</div>
+      <div class="step"><span>🌐</span>Live</div>
+    </div>
+  </section>
+
+  <!-- 6b. Architecture diagram -->
+  <section>
+    <h2>Architecture</h2>
+    <div class="panel">
+      <svg viewBox="0 0 720 170" class="arch" aria-label="Architecture diagram">
+        <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="afill"/></marker></defs>
+        <rect x="10" y="55" width="110" height="60" rx="10" class="abox"/><text x="65" y="82" class="atxt">User</text><text x="65" y="100" class="asub">Browser</text>
+        <rect x="190" y="55" width="140" height="60" rx="10" class="abox"/><text x="260" y="82" class="atxt">Render</text><text x="260" y="100" class="asub">Cloud hosting</text>
+        <rect x="400" y="30" width="170" height="110" rx="10" class="abox accent"/><text x="485" y="58" class="atxt">Docker container</text>
+        <text x="485" y="80" class="asub">Node.js + Express</text><text x="485" y="98" class="asub">/health  /api/info</text><text x="485" y="116" class="asub">non-root user</text>
+        <rect x="630" y="55" width="85" height="60" rx="10" class="abox"/><text x="672" y="82" class="atxt">IBM ICR</text><text x="672" y="100" class="asub">Image store</text>
+        <line x1="120" y1="85" x2="188" y2="85" class="aline" marker-end="url(#ah)"/>
+        <line x1="330" y1="85" x2="398" y2="85" class="aline" marker-end="url(#ah)"/>
+        <line x1="628" y1="85" x2="572" y2="85" class="aline dashed" marker-end="url(#ah)"/>
+        <text x="600" y="150" class="asub" text-anchor="middle">image pushed here</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 6c. Dockerfile explained -->
+  <section>
+    <h2>The Dockerfile, explained</h2>
+    <div class="panel">
+<pre class="code"><span class="c"># Stage 1: install dependencies</span>
+FROM node:20-alpine AS deps          <span class="c"># small Linux + Node</span>
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm ci --omit=dev                <span class="c"># only production packages</span>
+
+<span class="c"># Stage 2: final small image</span>
+FROM node:20-alpine
+COPY --from=deps ... node_modules    <span class="c"># take only what we need</span>
+COPY app.js server.js public ./
+USER node                            <span class="c"># run as normal user, not root</span>
+EXPOSE 3000                          <span class="c"># app listens on 3000</span>
+HEALTHCHECK ... /health              <span class="c"># Docker checks app is alive</span>
+CMD ["node", "server.js"]            <span class="c"># start command</span></pre>
+    </div>
+  </section>
+
+  <!-- 6d. Q&A accordions -->
+  <section>
+    <h2>Quick concepts</h2>
+    <details><summary>What is Docker?</summary><p>Docker packs an app with everything it needs (Node, libraries) into one container, so it runs the same on any machine.</p></details>
+    <details><summary>Image vs container?</summary><p>An image is the recipe. A container is the running dish made from that recipe.</p></details>
+    <details><summary>Why a multi-stage build?</summary><p>Stage 1 installs packages, stage 2 copies only what is needed. The final image is smaller and safer.</p></details>
+    <details><summary>What does the health check do?</summary><p>Every 30 seconds Docker calls <code>/health</code>. If the app does not answer, the container is marked unhealthy.</p></details>
+    <details><summary>What is CI/CD here?</summary><p>On every <code>git push</code>, GitHub Actions runs the tests, builds the image and pushes it to the registry automatically.</p></details>
+    <details><summary>Container vs virtual machine?</summary><p>A VM runs a full operating system (heavy). A container shares the host OS (light and fast).</p></details>
+  </section>
+
+  <!-- 7. Tech stack -->
+  <section>
+    <h2>Tech stack</h2>
+    <div class="chips">
+      <span>Node.js 20</span><span>Express</span><span>Docker (multi-stage)</span>
+      <span>docker-compose</span><span>Jest tests</span><span>GitHub Actions</span>
+      <span>IBM Container Registry</span><span>Render</span>
+    </div>
+    <p class="muted small">Tip: "Container hostname" is the container ID. It proves the app runs inside a container.</p>
+  </section>
 </main>
-<footer>Mini Project &middot; Containerization &amp; Cloud Deployment</footer>
 
+<footer>Mini Project &middot; Containerization &amp; Cloud Deployment &middot; Built by Samad</footer>
 <script src="app.js"></script>
 </body>
 </html>

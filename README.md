@@ -1,5 +1,10 @@
 # Dockerized Web App Deployment on IBM Cloud
 
+![CI](https://github.com/samadferoz/dockerized-webapp-ibm-cloud/actions/workflows/deploy.yml/badge.svg)
+![Node](https://img.shields.io/badge/Node.js-20-green)
+![Docker](https://img.shields.io/badge/Docker-multi--stage-blue)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
 A simple Node.js (Express) web application, containerized using **Docker**, and ready to be deployed on **IBM Cloud** (Code Engine or Kubernetes Service).
 
 ## 📌 Project Overview
@@ -38,6 +43,7 @@ flowchart LR
 ```
 
 ## ✨ Features
+- Attractive dashboard: gradient header, animated cards, live memory chart, pipeline view, built-in load test button
 - Live dashboard (hostname, uptime, memory, visitors, health status, dark/light theme)
 - Security headers (`helmet`) and request logging (`morgan`)
 - Multi-stage Dockerfile, non-root user, Docker `HEALTHCHECK`
@@ -166,3 +172,14 @@ _(Apne experience se likho: registry login errors, port mapping, image size, etc
 - Monitoring with IBM Cloud Monitoring / Prometheus
 - Custom domain + HTTPS certificate
 - Infrastructure as Code with Terraform
+
+## 📏 Docker Image Size (before vs after)
+Run `docker images` and fill in your own numbers:
+
+| Version | Dockerfile | Size |
+|---|---|---|
+| v1 | single stage, root user | _(your value)_ |
+| v2 | multi-stage, non-root, healthcheck | ~49 MB compressed |
+
+## 📸 Screenshots
+Add screenshots here: dashboard, `docker ps` (healthy), `docker images`, IBM Container Registry, live URL, GitHub Actions.
